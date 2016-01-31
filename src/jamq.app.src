@@ -7,7 +7,10 @@
                   kernel,
                   stdlib,
                   lager,
-                  dht_ring
+                  amqp_client,
+                  dht_ring,
+                  corman,
+                  echo_async
                  ]},
   {mod, { jamq_app, []}},
   {env, []}
