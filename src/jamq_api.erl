@@ -99,7 +99,7 @@ delete_queue(Channel, Q, Options) ->
         lists:foldl(
             fun ({if_unused, Val}, D) -> D#'queue.delete'{if_unused = Val};
                 ({if_empty, Val}, D) -> D#'queue.delete'{if_empty = Val}
-            end, #'queue.delete'{queue = type_utils:to_binary(Q)}, Options),
+            end, #'queue.delete'{queue = to_binary(Q)}, Options),
     #'queue.delete_ok'{} = amqp_channel:call(Channel, QueueDelete).
 
 %% Sets the prefetch count for messages delivered on this channel
@@ -190,3 +190,8 @@ get(Channel, Q, NoAck) ->
                 false -> {DeliveryTag, Content}
             end
     end.
+
+to_binary(S) when is_list(S) ->
+    list_to_binary(S);
+to_binary(S) when is_binary(S) ->
+    S.

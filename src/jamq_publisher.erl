@@ -55,7 +55,7 @@
     brokers        = []          :: [nonempty_string()], % Defines order to send messages
     channels       = []          :: [#chan{}],           % Active AMQP Channels
     ch_timer       = undefined   :: timer:tref(),        % Reconnection timer
-    queue          = queue:new() :: queue(),             % Excess queue
+    queue          = queue:new() :: queue:queue(),       % Excess queue
     sent_msg_count = 0           :: pos_integer()
 }).
 
