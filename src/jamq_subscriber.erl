@@ -29,10 +29,10 @@
 
 -define(gc_period, 1000).
 
--define(DEFAULT_EXCHANGE, <<"jskit-bus">>).
 -define(RETRY_TIMEOUT, 5000).
 -define(GRACEFUL_SHUTDOWN_TIMEOUT, 4000).
 
+-include_lib("jamq/include/jamq.hrl").
 -include_lib("amqp_client/include/amqp_client.hrl").
 
 -ifdef(TEST).
@@ -93,7 +93,7 @@ init(Properties) ->
                 {queue_bind_tag, undefined}, % deprecated, use queue_bind_keys
                 {queue_bind_keys, []},
                 {broker, undefined},
-                {exchange, ?DEFAULT_EXCHANGE},
+                {exchange, ?JAMQ_DEFAULT_EXCHANGE},
                 {function, undefined},
                 {auto_ack, true},
                 {queue_args, []},

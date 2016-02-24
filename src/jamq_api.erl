@@ -6,6 +6,7 @@
 -module(jamq_api).
 -compile(export_all).
 
+-include_lib("jamq/include/jamq.hrl").
 -include_lib("amqp_client/include/amqp_client.hrl").
 
 -define(DEFAULT_AMQP_HEARTBEAT, 10). % in sec
@@ -107,7 +108,7 @@ set_prefetch_count(Channel, Prefetch) ->
     amqp_channel:call(Channel, #'basic.qos'{prefetch_count = Prefetch}).
 
 publish(Channel, Message) ->
-    publish(Channel, <<"jskit-bus">>,
+    publish(Channel, ?JAMQ_DEFAULT_EXCHANGE,
         <<"update">>,
         term_to_binary({jamq, Message})).
 

@@ -7,6 +7,7 @@
 %%
 -module(jamq).
 
+-include_lib("jamq/include/jamq.hrl").
 -include_lib("amqp_client/include/amqp_client.hrl").
 
 -export([
@@ -104,7 +105,7 @@ create_queue(BrokerRole, QueueName) when is_atom(BrokerRole), is_list(QueueName)
                     Queue = list_to_binary(QueueName),
                     jamq_api:declare_permanent_queue(Channel, Queue),
                     #'queue.bind_ok'{} =
-                        jamq_api:bind_queue(Channel, <<"jskit-bus">>, Queue, Queue)
+                        jamq_api:bind_queue(Channel, ?JAMQ_DEFAULT_EXCHANGE, Queue, Queue)
                 end, Brokers),
             ok
         end).

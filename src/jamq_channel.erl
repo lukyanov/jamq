@@ -30,6 +30,9 @@
     code_change/3
 ]).
 
+-include_lib("jamq/include/jamq.hrl").
+-include_lib("amqp_client/include/amqp_client.hrl").
+
 status(ChanServer) when is_atom(ChanServer); is_pid(ChanServer) -> gen_server:call(ChanServer, {status}).
 
 name(BrokerGroup, Host) when is_atom(BrokerGroup), is_list(Host) ->
@@ -155,11 +158,7 @@ asynchronous_connect(#state{role = Role, hostname = BrokerHostname} = State) ->
             Connection = jamq_api:start_connection(BrokerHostname),
             Channel = jamq_api:start_channel(Connection),
             jamq_api:declare_permanent_exchange(Channel,
-                <<"jskit-bus">>, <<"topic">>),
-            jamq_api:declare_permanent_exchange(Channel,
-                <<"echo-live">>, <<"fanout">>),
-            jamq_api:declare_permanent_exchange(Channel,
-                <<"echo-e3-live">>, <<"fanout">>),
+                ?JAMQ_DEFAULT_EXCHANGE, <<"topic">>),
             jamq_api:close_channel(Channel),
             Connection
         end,

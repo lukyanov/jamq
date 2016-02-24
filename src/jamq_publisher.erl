@@ -59,6 +59,7 @@
     sent_msg_count = 0           :: pos_integer()
 }).
 
+-include_lib("jamq/include/jamq.hrl").
 -include_lib("rabbit_common/include/rabbit.hrl").
 -include_lib("rabbit_common/include/rabbit_framing.hrl").
 
@@ -118,7 +119,7 @@ publish_opt(Msg, Opts) when is_list(Opts) ->
     case maybe_publish(Msg) of
         true ->
             Role = proplists:get_value(broker, Opts),
-            Exchange = proplists:get_value(exchange, Opts, <<"jskit-bus">>),
+            Exchange = proplists:get_value(exchange, Opts, ?JAMQ_DEFAULT_EXCHANGE),
             Timeout = proplists:get_value(timeout, Opts, 30000),
             DeliveryMode = case proplists:get_bool(transient, Opts) of
                     true -> 1; false -> 2 end,
@@ -392,10 +393,10 @@ send_to_channel(Broker, {_, PubMsg} = Msg, Channels) ->
     lists:keystore(Broker, #chan.broker, Channels, NewChan).
 
 amqp_publish(Channel, {publish, _Key, Topic, Binary}) ->
-    amqp_publish(Channel, <<"jskit-bus">>, Topic, Binary,
+    amqp_publish(Channel, ?JAMQ_DEFAULT_EXCHANGE, Topic, Binary,
         _DeliveryMode = 2);
 amqp_publish(Channel, {transient_publish, _Key, Topic, Binary}) ->
-    amqp_publish(Channel, <<"jskit-bus">>, Topic, Binary,
+    amqp_publish(Channel, ?JAMQ_DEFAULT_EXCHANGE, Topic, Binary,
         _DeliveryMode = 1);
 amqp_publish(Channel, {publish, _Key, Exchange, Topic, Binary, DeliveryMode, _NoWait}) ->
     amqp_publish(Channel, Exchange, Topic, Binary, DeliveryMode).
