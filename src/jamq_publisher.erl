@@ -16,7 +16,8 @@
 %% API
 -export([start_link/1, % obsolete
          start_link/2,
-         stop/2]).
+         stop/2,
+         name/1]).
 
 % JAMQ API
 -export([async_publish/2,

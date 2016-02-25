@@ -91,13 +91,24 @@ connection(Role) when is_atom(Role) ->
 stop(Role, Reason) ->
     gen_server:call(Role, {stop, Reason}).
 
--record(state, { role, hostname, connection, conn_establisher }).
+-record(state, {
+    role,
+    connection_uri,
+    host,
+    connection,
+    conn_establisher
+}).
 
-start_link(Name, HostName) when is_atom(Name), is_list(HostName) ->
-    gen_server:start_link({local, Name}, ?MODULE, [Name, HostName], []).
+start_link(Name, ConnectionURI) when is_atom(Name), is_list(ConnectionURI) ->
+    gen_server:start_link({local, Name}, ?MODULE, [Name, ConnectionURI], []).
 
-init([Name, HostName]) when is_atom(Name), is_list(HostName) ->
-    {ok, #state{role = Name, hostname = HostName}}.
+init([Name, ConnectionURI]) when is_atom(Name), is_list(ConnectionURI) ->
+    {ok, ParsedURI} = amqp_uri:parse(ConnectionURI),
+    {ok, #state{
+            role = Name,
+            connection_uri = ConnectionURI,
+            host = ParsedURI#amqp_params_network.host
+    }}.
 
 handle_call({get_connection}, _From, State) ->
     {reply, State#state.connection, State};
@@ -126,7 +137,7 @@ handle_call({stop, Reason}, _From, State) ->
 
 handle_cast(_Msg, State) -> {noreply, State}.
 
-handle_info({connection_established, E, Conn}, #state{conn_establisher = E, hostname = HostName} = State) ->
+handle_info({connection_established, E, Conn}, #state{conn_establisher = E, host = HostName} = State) ->
     lager:info("Established AMQ connection ~p to ~p", [Conn, HostName]),
     MRef = erlang:monitor(process, Conn),
     Self = self(),
@@ -150,12 +161,13 @@ code_change(_OldVsn, State, _Extra) -> {ok, State}.
 
 %% INTERNAL FUNCTIONS
 
-asynchronous_connect(#state{role = Role, hostname = BrokerHostname} = State) ->
+asynchronous_connect(#state{role = Role, host = BrokerHostname,
+        connection_uri = ConnectionURI} = State) ->
     lager:info("[JAMQ/~p] Connecting to ~p...", [Role, BrokerHostname]),
     Self = self(),
     Establisher = jsk_async:apply_after(
         fun() ->
-            Connection = jamq_api:start_connection(BrokerHostname),
+            Connection = jamq_api:start_connection(ConnectionURI),
             Channel = jamq_api:start_channel(Connection),
             jamq_api:declare_permanent_exchange(Channel,
                 ?JAMQ_DEFAULT_EXCHANGE, <<"topic">>),

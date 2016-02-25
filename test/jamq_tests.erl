@@ -18,7 +18,7 @@ setup() ->
     meck:expect(jamq_api, close_channel, fun (_) -> ok end),
     meck:expect(jamq_api, publish, fun(_, _, _, _, _) -> ok end),
     meck:expect(jamq_api, subscribe, fun(_, _, _, _, _, _) -> ok end),
-    meck:expect(jamq_api, get_brokers, fun(_) -> ["broker1", "broker2"] end).
+    meck:expect(jamq_api, get_broker_role_hosts, fun(_) -> ["broker_host1", "broker_host2"] end).
 
 teardown(_) ->
     meck:unload().

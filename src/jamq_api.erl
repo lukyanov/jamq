@@ -15,13 +15,10 @@ start_connection() ->
     {ok, Connection} = amqp_connection:start(#amqp_params_direct{}),
     Connection.
 
-start_connection(Host) ->
-    start_connection(Host, ?PROTOCOL_PORT).
-
-start_connection(Host, Port) ->
-    {ok, Connection} = amqp_connection:start(#amqp_params_network{
-            host = Host,
-            port = Port,
+start_connection(ConnectionURI) ->
+    {ok, Params} = amqp_uri:parse(ConnectionURI),
+    {ok, Connection} = amqp_connection:start(
+        Params#amqp_params_network{
             heartbeat = ?DEFAULT_AMQP_HEARTBEAT
         }),
     Connection.
@@ -30,7 +27,7 @@ start_channel(Connection) ->
     {ok, Channel} = amqp_connection:open_channel(Connection),
     Channel.
 
-get_brokers(Broker) -> jamq_supervisor:get_brokers(Broker).
+get_broker_role_hosts(BrokerRole) -> jamq_supervisor:get_broker_role_hosts(BrokerRole).
 
 declare_permanent_exchange(Channel, X, Type) ->
     amqp_channel:call(Channel, #'exchange.declare'{

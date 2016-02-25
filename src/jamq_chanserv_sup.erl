@@ -14,13 +14,14 @@
 ]).
 
 start_link(BrokerSpecs) ->
-    lager:info("[start_link] Starting Echo AMQ chanserv supervisor"),
+    lager:info("[start_link] Starting JAMQ chanserv supervisor"),
     supervisor:start_link({local, ?MODULE}, ?MODULE, BrokerSpecs).
 
 init(BrokerSpecs) ->
 
-    ChannelsSpecs =
-        [spec(BrokerGroup, BrokerHostName) || {BrokerGroup, BrokerHosts} <-  BrokerSpecs, BrokerHostName <- BrokerHosts],
+    ChannelsSpecs = [spec(BrokerGroup, BrokerURI, BrokerHost) ||
+        {BrokerGroup, Brokers}  <- BrokerSpecs,
+        {BrokerURI, BrokerHost} <- Brokers],
 
     {ok, {{one_for_one, 10, 10}, ChannelsSpecs}}.
 
@@ -29,15 +30,15 @@ children_specs({_, start_link, [BrokerSpecs]}) ->
     Specs.
 
 reconfigure() ->
-    {ok, BrokerSpecs} = application:get_env(jamq, amq_servers),
-    {ok, { _, ChildSpecs }} = init(BrokerSpecs),
+    {ok, { _, ChildSpecs }} = init(jamq_supervisor:read_brokers_from_config()),
     superman:reconfigure_supervisor(?MODULE, ChildSpecs).
 
 start_new_channels() ->
-    {ok, BrokerSpecs} = application:get_env(jamq, amq_servers),
+    BrokerSpecs = jamq_supervisor:read_brokers_from_config(),
 
-    NewSpecs =
-        [spec(BrokerGroup, BrokerHostName) || {BrokerGroup, BrokerHosts} <-  BrokerSpecs, BrokerHostName <- BrokerHosts],
+    NewSpecs = [spec(BrokerGroup, BrokerURI, BrokerHost) ||
+        {BrokerGroup, Brokers}  <- BrokerSpecs,
+        {BrokerURI, BrokerHost} <- Brokers],
 
     lists:foreach(
         fun({Id, _, _, _, _, _} = S) ->
@@ -51,15 +52,12 @@ start_new_channels() ->
 
     io:format("Channels restart finished~n").
 
-spec(Group, Broker) ->
+spec(Group, BrokerURI, BrokerHost) ->
     {
-        process_name([erlang:atom_to_list(Group), Broker]),
-        {jamq_channel, start_link, [jamq_channel:name(Group, Broker), Broker]},
+        jamq_channel:name(Group, BrokerHost),
+        {jamq_channel, start_link, [jamq_channel:name(Group, BrokerHost), BrokerURI]},
         permanent, 10000, worker, [jamq_channel]
     }.
-
-process_name(List) ->
-    list_to_atom(string:join(List, "_")).
 
 format_status() ->
     Statuses = [jamq_channel:status(P) || {_, P, _, _} <- supervisor:which_children(?MODULE)],

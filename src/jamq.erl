@@ -98,15 +98,15 @@ create_queue({BrokerRole, QueueName}) ->
 create_queue(BrokerRole, QueueName) when is_atom(BrokerRole), is_list(QueueName) ->
     jsk_async:complete(
         fun() ->
-            Brokers = jamq_api:get_brokers(BrokerRole),
+            Hosts = jamq_api:get_broker_role_hosts(BrokerRole),
             lists:foreach(
-                fun (B) ->
-                    Channel = jamq_channel:channel(jamq_channel:name(BrokerRole, B)),
+                fun (BrokerHost) ->
+                    Channel = jamq_channel:channel(jamq_channel:name(BrokerRole, BrokerHost)),
                     Queue = list_to_binary(QueueName),
                     jamq_api:declare_permanent_queue(Channel, Queue),
                     #'queue.bind_ok'{} =
                         jamq_api:bind_queue(Channel, ?JAMQ_DEFAULT_EXCHANGE, Queue, Queue)
-                end, Brokers),
+                end, Hosts),
             ok
         end).
 
@@ -120,16 +120,16 @@ delete_queue(BrokerRole, Q) ->
 delete_queue(BrokerRole, Q, Options) when is_atom(BrokerRole), is_list(Q), is_list(Options) ->
     jsk_async:complete(
         fun () ->
-            Brokers = jamq_api:get_brokers(BrokerRole),
+            Hosts = jamq_api:get_broker_role_hosts(BrokerRole),
             lists:foreach(
-                fun (B) ->
-                    Channel = jamq_channel:channel(jamq_channel:name(BrokerRole, B)),
+                fun (BrokerHost) ->
+                    Channel = jamq_channel:channel(jamq_channel:name(BrokerRole, BrokerHost)),
                     try
                         #'queue.delete_ok'{} = jamq_api:delete_queue(Channel, Q, Options)
                     catch
                         exit:{{shutdown, {server_initiated_close,404, _}}, _} -> ok
                     end
-                end, Brokers),
+                end, Hosts),
             ok
         end).
 

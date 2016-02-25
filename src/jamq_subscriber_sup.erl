@@ -57,8 +57,8 @@ init({children, Properties}) ->
                 ChanServ = proplists:get_value(broker, Properties, undefined),
                 [ChanServ];
             _ ->
-                Hosts = jamq_supervisor:get_brokers(BrokerGroup),
-                [jamq_channel:name(BrokerGroup, H) || H <- Hosts]
+                Hosts = jamq_supervisor:get_broker_role_hosts(BrokerGroup),
+                [jamq_channel:name(BrokerGroup, Host) || Host <- Hosts]
         end,
 
    Specs = lists:map(

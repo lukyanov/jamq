@@ -13,16 +13,17 @@
 ]).
 
 start_link(BrokerSpecs) ->
-    lager:info("[start_link] Starting Echo AMQ publisher supervisor"),
+    lager:info("[start_link] Starting JAMQ publisher supervisor"),
     supervisor:start_link({local, ?MODULE}, ?MODULE, BrokerSpecs).
 
 init(BrokerSpecs) ->
-
     PublishersSpecs = lists:map(
-        fun ({PublisherName, BrokersList}) when is_atom(PublisherName) ->
+        fun ({BrokerGroup, BrokersList}) when is_atom(BrokerGroup) ->
             {
-                PublisherName,
-                {jamq_publisher, start_link, [PublisherName, [jamq_channel:name(PublisherName, B) || B <- BrokersList]]},
+                jamq_publisher:name(BrokerGroup),
+                {jamq_publisher, start_link, [BrokerGroup,
+                        [jamq_channel:name(BrokerGroup, BrokerHost) ||
+                            {_, BrokerHost} <- BrokersList]]},
                 permanent, 10000, worker, [jamq_publisher]
             }
         end, BrokerSpecs),
@@ -34,10 +35,8 @@ children_specs({_, start_link, [BrokerSpecs]}) ->
     Specs.
 
 reconfigure() ->
-    {ok, BrokerSpecs} = application:get_env(jamq, amq_servers),
-    {ok, { _, ChildSpecs }} = init(BrokerSpecs),
+    {ok, { _, ChildSpecs }} = init(jamq_supervisor:read_brokers_from_config()),
     superman:reconfigure_supervisor_tree(?MODULE, ChildSpecs).
-
 
 format_status() ->
     L = supervisor:which_children(?MODULE),

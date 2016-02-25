@@ -7,23 +7,22 @@
 -export([
     init/1,
     start_link/0,
-    start_link/1,
     reconfigure/0,
-    get_brokers/1, % temporarily function
+    get_broker_role_hosts/1,
     children_specs/1,
     restart_subscribers/0,
-    force_restart_subscribers/0
+    force_restart_subscribers/0,
+    read_brokers_from_config/0
 ]).
 
+-include_lib("amqp_client/include/amqp_client.hrl").
+
 start_link() ->
-    BrokerSpecs = case application:get_env(jamq, amq_servers) of
-        {ok, B} -> B;
-        undefined -> []
-    end,
+    BrokerSpecs = read_brokers_from_config(),
     start_link(BrokerSpecs).
 
 start_link(BrokerSpecs) ->
-    lager:info("[start_link] Starting Echo AMQ supervisor"),
+    lager:info("[start_link] Starting JAMQ supervisor"),
     supervisor:start_link({local, ?MODULE}, ?MODULE, BrokerSpecs).
 
 init(BrokerSpecs) ->
@@ -37,8 +36,7 @@ init(BrokerSpecs) ->
     {ok, {{one_for_all, 3, 10}, [ChanservSup, PublishersSup, SubscribersSup]}}.
 
 children_specs({_, start_link, []}) ->
-    {ok, BrokerSpecs} = application:get_env(jamq, amq_servers),
-    {ok, {_, Specs}} = init(BrokerSpecs),
+    {ok, {_, Specs}} = init(read_brokers_from_config()),
     Specs;
 children_specs({_, start_link, [BrokerSpecs]}) ->
     {ok, {_, Specs}} = init(BrokerSpecs),
@@ -49,14 +47,24 @@ reconfigure() ->
     restart_subscribers(),
     jamq_publisher_sup:reconfigure().
 
-get_brokers(Role) ->
-    {ok, Config} = application:get_env(jamq, amq_servers),
-    case proplists:get_value(Role, Config, undefined) of
-        Brokers when is_list(Brokers) -> Brokers;
+get_broker_role_hosts(Role) ->
+    BrokerSpecs = read_brokers_from_config(),
+    case proplists:get_value(Role, BrokerSpecs) of
         undefined ->
             lager:error("Invalid broker group name: ~p", [Role]),
-            erlang:error({no_such_broker_group, Role})
+            erlang:error({no_such_broker_group, Role});
+        Brokers ->
+            [H || {_, H} <- Brokers]
     end.
+
+read_brokers_from_config() ->
+    {ok, Brokers} = application:get_env(jamq, amq_servers),
+    [{Role, [{URI, broker_host_from_uri(URI)} || URI <- BrokerURIs]} ||
+        {Role, BrokerURIs} <- Brokers].
+
+broker_host_from_uri(BrokerURI) ->
+    {ok, BrokerParams} = amqp_uri:parse(BrokerURI),
+    BrokerParams#amqp_params_network.host.
 
 restart_subscribers() ->
     L = supervisor:which_children(jamq_subscriber_top_sup),
