@@ -13,5 +13,7 @@
                   echo_async
                  ]},
   {mod, { jamq_app, []}},
-  {env, []}
+  {env, [
+   {amq_servers, []}
+  ]}
  ]}.
